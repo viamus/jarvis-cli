@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis-cli"
+version = "0.1.0"
+description = "Voice middleware for Claude Code — speech-to-text in PT-BR and EN"
+requires-python = ">=3.10"
+dependencies = [
+    "faster-whisper>=1.0.0",
+    "sounddevice>=0.4.6",
+    "numpy>=1.24",
+    "keyboard>=0.13.5",
+    "click>=8.1",
+]
+
+[project.scripts]
+jarvis = "jarvis.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
