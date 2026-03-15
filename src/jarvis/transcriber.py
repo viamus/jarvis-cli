@@ -64,7 +64,7 @@ class Transcriber:
         device, compute_type = _detect_device()
         # GPU allows larger model for much better accuracy
         if device == "cuda" and model_name == "small":
-            model_name = "large-v3"
+            model_name = "distil-large-v3"
         self.model_name = model_name
         self.device = device
         self.compute_type = compute_type
