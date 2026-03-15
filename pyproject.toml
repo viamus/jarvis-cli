@@ -13,6 +13,8 @@ dependencies = [
     "numpy>=1.24",
     "keyboard>=0.13.5",
     "click>=8.1",
+    "pystray>=0.19",
+    "Pillow>=10.0",
 ]
 
 [project.scripts]

@@ -1,0 +1,66 @@
+"""System tray integration for Jarvis daemon."""
+
+from __future__ import annotations
+
+import threading
+from typing import TYPE_CHECKING
+
+import pystray
+
+from jarvis.icon import create_icon
+
+if TYPE_CHECKING:
+    from jarvis.daemon import Daemon
+
+
+class TrayIcon:
+    """Manages the Windows system tray icon for Jarvis."""
+
+    def __init__(self, daemon: Daemon) -> None:
+        self._daemon = daemon
+        self._icon: pystray.Icon | None = None
+        self._state = "idle"
+
+    def _build_menu(self) -> pystray.Menu:
+        return pystray.Menu(
+            pystray.MenuItem("Jarvis Voice", None, enabled=False),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                lambda _: f"Status: {self._state.capitalize()}",
+                None,
+                enabled=False,
+            ),
+            pystray.MenuItem(
+                lambda _: f"Hotkey: {self._daemon._hotkey}",
+                None,
+                enabled=False,
+            ),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Quit", self._on_quit),
+        )
+
+    def set_state(self, state: str) -> None:
+        """Update icon state: 'idle', 'recording', or 'transcribing'."""
+        self._state = state
+        if self._icon is not None:
+            self._icon.icon = create_icon(state)
+            self._icon.title = f"Jarvis — {state.capitalize()}"
+
+    def _on_quit(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
+        self._daemon.shutdown()
+        icon.stop()
+
+    def run(self) -> None:
+        """Start the tray icon (blocks the calling thread)."""
+        self._icon = pystray.Icon(
+            name="jarvis",
+            icon=create_icon("idle"),
+            title="Jarvis — Idle",
+            menu=self._build_menu(),
+        )
+        self._icon.run()
+
+    def stop(self) -> None:
+        """Stop the tray icon from another thread."""
+        if self._icon is not None:
+            self._icon.stop()

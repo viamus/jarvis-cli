@@ -29,11 +29,15 @@ from jarvis.vad import SilenceDetector
 class Daemon:
     """Jarvis voice daemon."""
 
-    def __init__(self) -> None:
+    def __init__(self, use_tray: bool = True) -> None:
         self._recording = False
         self._lock = threading.Lock()
         self._recorder = Recorder()
         self._vad = SilenceDetector()
+        self._use_tray = use_tray
+        self._tray = None
+        self._hotkey = HOTKEY
+        self._shutdown_event = threading.Event()
         click.echo("Loading Whisper model...")
         self._transcriber = Transcriber()
         click.echo("Whisper model loaded.")
@@ -50,6 +54,9 @@ class Daemon:
     def _record_and_transcribe(self) -> None:
         """Record audio, detect silence, transcribe, and save."""
         try:
+            if self._tray:
+                self._tray.set_state("recording")
+
             beep_start()
             self._vad.reset()
             self._recorder.start()
@@ -78,6 +85,9 @@ class Daemon:
                 click.echo("Audio too short, discarding.")
                 return
 
+            if self._tray:
+                self._tray.set_state("transcribing")
+
             click.echo("Transcribing...")
             result = self._transcriber.transcribe(audio, SAMPLE_RATE)
 
@@ -98,6 +108,8 @@ class Daemon:
         finally:
             with self._lock:
                 self._recording = False
+            if self._tray:
+                self._tray.set_state("idle")
 
     def write_pid(self) -> None:
         ensure_temp_dir()
@@ -107,22 +119,54 @@ class Daemon:
         if PID_FILE.exists():
             PID_FILE.unlink()
 
+    def shutdown(self) -> None:
+        """Signal the daemon to shut down cleanly."""
+        self.remove_pid()
+        self._shutdown_event.set()
+        click.echo("\nJarvis daemon stopped.")
+
     def run(self) -> None:
         """Start the daemon: register hotkey and block."""
         self.write_pid()
-        keyboard.add_hotkey(HOTKEY, self._on_hotkey)
-        click.echo(f"Jarvis daemon running. Hotkey: {HOTKEY}")
+        keyboard.add_hotkey(self._hotkey, self._on_hotkey)
+        click.echo(f"Jarvis daemon running. Hotkey: {self._hotkey}")
+
+        if self._use_tray:
+            self._run_with_tray()
+        else:
+            self._run_console()
+
+    def _run_with_tray(self) -> None:
+        """Run with system tray icon (no console needed)."""
+        from jarvis.tray import TrayIcon
+
+        self._tray = TrayIcon(self)
+
+        # Run keyboard listener in a background thread
+        def _keyboard_thread():
+            self._shutdown_event.wait()
+
+        kb_thread = threading.Thread(target=_keyboard_thread, daemon=True)
+        kb_thread.start()
+
+        click.echo("Jarvis is in the system tray. Right-click the icon to quit.")
+
+        # Tray icon blocks the main thread — when it exits, we clean up
+        self._tray.run()
+        self.remove_pid()
+
+    def _run_console(self) -> None:
+        """Run in console mode (original behavior)."""
         click.echo("Press Ctrl+C to stop.")
 
-        def _shutdown(signum, frame):
-            self.remove_pid()
-            click.echo("\nJarvis daemon stopped.")
+        def _shutdown_signal(signum, frame):
+            self.shutdown()
             sys.exit(0)
 
-        signal.signal(signal.SIGINT, _shutdown)
-        signal.signal(signal.SIGTERM, _shutdown)
+        signal.signal(signal.SIGINT, _shutdown_signal)
+        signal.signal(signal.SIGTERM, _shutdown_signal)
 
         try:
             keyboard.wait()  # Block forever
         except KeyboardInterrupt:
-            _shutdown(None, None)
+            _shutdown_signal(None, None)

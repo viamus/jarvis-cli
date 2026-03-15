@@ -18,11 +18,12 @@ def cli() -> None:
 
 
 @cli.command()
-def daemon() -> None:
+@click.option("--no-tray", is_flag=True, help="Run in console mode without system tray icon.")
+def daemon(no_tray: bool) -> None:
     """Start the Jarvis voice daemon (blocks)."""
     from jarvis.daemon import Daemon
 
-    d = Daemon()
+    d = Daemon(use_tray=not no_tray)
     d.run()
 
 
