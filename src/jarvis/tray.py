@@ -35,6 +35,7 @@ class TrayIcon:
                 None,
                 enabled=False,
             ),
+            pystray.MenuItem("Change Hotkey...", self._on_change_hotkey),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", self._on_quit),
         )
@@ -45,6 +46,18 @@ class TrayIcon:
         if self._icon is not None:
             self._icon.icon = create_icon(state)
             self._icon.title = f"Jarvis — {state.capitalize()}"
+
+    def _on_change_hotkey(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
+        """Open the hotkey capture dialog."""
+        from jarvis.hotkey_dialog import capture_hotkey
+        from jarvis.settings import set_hotkey
+
+        def _on_captured(new_hotkey: str) -> None:
+            set_hotkey(new_hotkey)
+            self._daemon.rebind_hotkey(new_hotkey)
+
+        # Run dialog in a separate thread to not block the tray
+        threading.Thread(target=capture_hotkey, args=(_on_captured,), daemon=True).start()
 
     def _on_quit(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
         self._daemon.shutdown()

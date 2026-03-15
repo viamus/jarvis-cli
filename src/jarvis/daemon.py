@@ -14,13 +14,13 @@ import numpy as np
 
 from jarvis.audio_feedback import beep_ready, beep_start, beep_stop
 from jarvis.config import (
-    HOTKEY,
     MAX_RECORDING_DURATION,
     PID_FILE,
     SAMPLE_RATE,
     ensure_temp_dir,
 )
 from jarvis.recorder import Recorder
+from jarvis.settings import get_hotkey
 from jarvis.storage import save_transcription
 from jarvis.transcriber import Transcriber
 from jarvis.vad import SilenceDetector
@@ -37,7 +37,7 @@ class Daemon:
         self._vad = SilenceDetector()
         self._use_tray = use_tray
         self._tray = None
-        self._hotkey = HOTKEY
+        self._hotkey = get_hotkey()
         self._shutdown_event = threading.Event()
         click.echo("Loading Whisper model...")
         self._transcriber = Transcriber()
@@ -133,6 +133,13 @@ class Daemon:
     def remove_pid(self) -> None:
         if PID_FILE.exists():
             PID_FILE.unlink()
+
+    def rebind_hotkey(self, new_hotkey: str) -> None:
+        """Change the hotkey at runtime."""
+        keyboard.remove_hotkey(self._hotkey)
+        self._hotkey = new_hotkey
+        keyboard.add_hotkey(self._hotkey, self._on_hotkey)
+        click.echo(f"Hotkey changed to: {self._hotkey}")
 
     def shutdown(self) -> None:
         """Signal the daemon to shut down cleanly."""
