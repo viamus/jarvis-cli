@@ -91,7 +91,10 @@ class Daemon:
                 f"({result.language}, {result.probability:.0%})"
             )
         except Exception as e:
-            click.echo(f"Error: {e}", err=True)
+            try:
+                click.echo(f"Error: {e}", err=True)
+            except OSError:
+                print(f"Error: {e}", file=sys.stderr, flush=True)
         finally:
             with self._lock:
                 self._recording = False

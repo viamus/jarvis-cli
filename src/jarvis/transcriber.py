@@ -26,7 +26,7 @@ class Transcriber:
         model_name: str = WHISPER_MODEL,
         compute_type: str = WHISPER_COMPUTE_TYPE,
     ):
-        self.model = WhisperModel(model_name, compute_type=compute_type)
+        self.model = WhisperModel(model_name, device="cpu", compute_type=compute_type)
 
     def transcribe(self, audio: np.ndarray, sample_rate: int = 16000) -> TranscriptionResult:
         """Transcribe a float32 audio array. Returns TranscriptionResult."""

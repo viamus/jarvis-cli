@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+import sys
+
 import click
 
 from jarvis.config import HOTKEY, PID_FILE, SAMPLE_RATE, ensure_temp_dir
@@ -97,14 +99,19 @@ def install_hook() -> None:
     hooks = settings.setdefault("hooks", {})
     user_prompt_hooks = hooks.setdefault("UserPromptSubmit", [])
 
-    jarvis_command = "python -m jarvis.hook"
+    jarvis_command = f"{sys.executable} -m jarvis.hook"
 
-    # Check if already installed
-    for entry in user_prompt_hooks:
+    # Check if already installed — remove old versions with wrong python path
+    for entry in user_prompt_hooks[:]:
         for h in entry.get("hooks", []):
-            if h.get("command") == jarvis_command:
-                click.echo("Jarvis hook is already installed.")
-                return
+            cmd = h.get("command", "")
+            if "jarvis.hook" in cmd:
+                if cmd == jarvis_command:
+                    click.echo("Jarvis hook is already installed.")
+                    return
+                # Remove old entry with wrong python path
+                user_prompt_hooks.remove(entry)
+                break
 
     user_prompt_hooks.append(
         {
@@ -122,6 +129,36 @@ def install_hook() -> None:
         json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     click.echo(f"Jarvis hook installed in {settings_path}")
+
+
+@cli.command("install-skill")
+def install_skill() -> None:
+    """Install the /jarvis skill into Claude Code."""
+    import shutil
+    import tempfile
+
+    skill_dir = Path.home() / ".claude" / "skills" / "jarvis"
+    skill_file = skill_dir / "SKILL.md"
+
+    # Build the python command that reads and consumes the transcription
+    temp_dir = Path(tempfile.gettempdir()) / "jarvis-cli"
+    json_path = temp_dir / "last_transcription.json"
+
+    skill_content = f"""---
+name: jarvis
+description: Read voice transcription from Jarvis daemon and use it as the user's spoken request. Use when the user invokes /jarvis.
+---
+
+The user spoke the following request via voice (transcribed by Jarvis voice middleware).
+Treat it as if the user typed it directly. Respond in the same language as the transcription.
+
+!`python -c "import json, tempfile, os; f=os.path.join(tempfile.gettempdir(),'jarvis-cli','last_transcription.json'); d=json.load(open(f,encoding='utf-8')); assert not d.get('consumed'), 'NO_TRANSCRIPTION'; d['consumed']=True; json.dump(d,open(f,'w',encoding='utf-8'),ensure_ascii=False); print(d['text'])"`
+"""
+
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file.write_text(skill_content.strip() + "\n", encoding="utf-8")
+    click.echo(f"Jarvis skill installed at {skill_file}")
+    click.echo("Use /jarvis in Claude Code to send voice transcriptions.")
 
 
 @cli.command("stop")

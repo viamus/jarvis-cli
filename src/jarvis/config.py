@@ -27,7 +27,7 @@ MIN_SPEECH_DURATION = 0.5  # minimum speech before allowing stop
 MAX_RECORDING_DURATION = 30.0  # hard cap on recording length
 
 # --- Hook ---
-TRIGGER_WORDS = ["/voz", "/voice", "/v"]
+TRIGGER_WORDS = ["voz", "voice", "jarvis", "v"]
 
 
 def ensure_temp_dir() -> Path:
