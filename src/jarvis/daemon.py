@@ -12,7 +12,7 @@ import click
 import keyboard
 import numpy as np
 
-from jarvis.audio_feedback import beep_start, beep_stop
+from jarvis.audio_feedback import beep_ready, beep_start, beep_stop
 from jarvis.config import (
     HOTKEY,
     MAX_RECORDING_DURATION,
@@ -31,6 +31,7 @@ class Daemon:
 
     def __init__(self, use_tray: bool = True) -> None:
         self._recording = False
+        self._stop_requested = threading.Event()
         self._lock = threading.Lock()
         self._recorder = Recorder()
         self._vad = SilenceDetector()
@@ -43,11 +44,14 @@ class Daemon:
         click.echo("Whisper model loaded.")
 
     def _on_hotkey(self) -> None:
-        """Handle hotkey press — toggle recording."""
+        """Handle hotkey press — toggle recording on/off."""
         with self._lock:
             if self._recording:
-                return  # Already recording, ignore
+                # Already recording — signal to stop
+                self._stop_requested.set()
+                return
             self._recording = True
+            self._stop_requested.clear()
 
         threading.Thread(target=self._record_and_transcribe, daemon=True).start()
 
@@ -65,6 +69,11 @@ class Daemon:
             start_time = time.monotonic()
             while True:
                 time.sleep(0.05)  # Check every 50ms
+
+                # Manual stop via hotkey
+                if self._stop_requested.is_set():
+                    click.echo("Stopped by hotkey.")
+                    break
 
                 # Hard time limit
                 elapsed = time.monotonic() - start_time
@@ -96,6 +105,7 @@ class Daemon:
                 return
 
             save_transcription(result.text, result.language)
+            beep_ready()
             click.echo(
                 f"Transcribed: \"{result.text}\" "
                 f"({result.language}, {result.probability:.0%})"

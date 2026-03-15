@@ -30,3 +30,15 @@ def beep_stop() -> None:
         _beep_in_thread(600, 200, times=2)
     else:
         print("\a", end="", flush=True)
+
+
+def beep_ready() -> None:
+    """Ascending beep indicating transcription is ready."""
+    if sys.platform == "win32":
+        def _play():
+            import winsound
+            winsound.Beep(800, 100)
+            winsound.Beep(1200, 100)
+        threading.Thread(target=_play, daemon=True).start()
+    else:
+        print("\a", end="", flush=True)
