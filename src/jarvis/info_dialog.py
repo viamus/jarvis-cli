@@ -16,8 +16,12 @@ def show_info(daemon: Daemon) -> None:
     gpu_name = "N/A"
     if t.device == "cuda":
         try:
-            import torch
-            gpu_name = torch.cuda.get_device_name(0)
+            import subprocess
+            result = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                capture_output=True, text=True, timeout=5,
+            )
+            gpu_name = result.stdout.strip() or "CUDA (unknown)"
         except Exception:
             gpu_name = "CUDA (unknown)"
 
