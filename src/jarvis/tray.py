@@ -50,6 +50,10 @@ class TrayIcon:
         self._daemon.shutdown()
         icon.stop()
 
+    def _setup(self, icon: pystray.Icon) -> None:
+        """Called by pystray after the icon is created — makes it visible."""
+        icon.visible = True
+
     def run(self) -> None:
         """Start the tray icon (blocks the calling thread)."""
         self._icon = pystray.Icon(
@@ -58,7 +62,7 @@ class TrayIcon:
             title="Jarvis — Idle",
             menu=self._build_menu(),
         )
-        self._icon.run()
+        self._icon.run(setup=self._setup)
 
     def stop(self) -> None:
         """Stop the tray icon from another thread."""

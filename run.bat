@@ -22,7 +22,7 @@ jarvis install-skill
 
 echo.
 echo Starting Jarvis (system tray)...
-start "" pythonw -m jarvis daemon
+start "" .venv\Scripts\pythonw.exe -m jarvis daemon
 echo Jarvis is running in the system tray!
 echo You can close this window.
 timeout /t 3
