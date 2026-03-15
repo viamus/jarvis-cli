@@ -84,6 +84,9 @@ def capture_hotkey(on_captured: Callable[[str], None]) -> None:
         return "break"
 
     def _on_mouse(event: tk.Event) -> str:
+        # Ignore left click — it's used for OK/Cancel buttons
+        if event.num == 1:
+            return ""
         name = _MOUSE_NAMES.get(event.num, f"mouse{event.num}")
         _show_captured(name)
         return "break"
