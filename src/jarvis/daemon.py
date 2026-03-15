@@ -57,7 +57,7 @@ class Daemon:
 
             start_time = time.monotonic()
             while True:
-                time.sleep(0.1)  # Check every 100ms
+                time.sleep(0.05)  # Check every 50ms
 
                 # Hard time limit
                 elapsed = time.monotonic() - start_time

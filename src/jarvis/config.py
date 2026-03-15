@@ -13,16 +13,16 @@ PID_FILE = _TEMP_DIR / "daemon.pid"
 HOTKEY = os.environ.get("JARVIS_HOTKEY", "ctrl+alt+j")
 
 # --- Whisper ---
-WHISPER_MODEL = os.environ.get("JARVIS_WHISPER_MODEL", "base")
-WHISPER_COMPUTE_TYPE = "int8"
+WHISPER_MODEL = os.environ.get("JARVIS_WHISPER_MODEL", "small")
+WHISPER_COMPUTE_TYPE = "float32"
 
 # --- Audio ---
 SAMPLE_RATE = 16000
 CHANNELS = 1
 
 # --- VAD ---
-SILENCE_THRESHOLD = 0.01
-SILENCE_DURATION = 1.5  # seconds of silence before stopping
+SILENCE_THRESHOLD = 0.005
+SILENCE_DURATION = 2.0  # seconds of silence before stopping
 MIN_SPEECH_DURATION = 0.5  # minimum speech before allowing stop
 MAX_RECORDING_DURATION = 30.0  # hard cap on recording length
 
