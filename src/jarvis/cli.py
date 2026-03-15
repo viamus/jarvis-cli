@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import os
-from pathlib import Path
-
 import sys
+from pathlib import Path
 
 import click
 
@@ -85,64 +83,17 @@ def status() -> None:
         PID_FILE.unlink()
 
 
-@cli.command("install-hook")
-def install_hook() -> None:
-    """Install the Jarvis hook into Claude Code settings."""
-    settings_path = Path.home() / ".claude" / "settings.json"
-
-    if settings_path.exists():
-        settings = json.loads(settings_path.read_text(encoding="utf-8"))
-    else:
-        settings_path.parent.mkdir(parents=True, exist_ok=True)
-        settings = {}
-
-    hooks = settings.setdefault("hooks", {})
-    user_prompt_hooks = hooks.setdefault("UserPromptSubmit", [])
-
-    jarvis_command = f"{sys.executable} -m jarvis.hook"
-
-    # Check if already installed — remove old versions with wrong python path
-    for entry in user_prompt_hooks[:]:
-        for h in entry.get("hooks", []):
-            cmd = h.get("command", "")
-            if "jarvis.hook" in cmd:
-                if cmd == jarvis_command:
-                    click.echo("Jarvis hook is already installed.")
-                    return
-                # Remove old entry with wrong python path
-                user_prompt_hooks.remove(entry)
-                break
-
-    user_prompt_hooks.append(
-        {
-            "matcher": "",
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": jarvis_command,
-                }
-            ],
-        }
-    )
-
-    settings_path.write_text(
-        json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-    click.echo(f"Jarvis hook installed in {settings_path}")
-
-
 @cli.command("install-skill")
 def install_skill() -> None:
     """Install the /jarvis skill into Claude Code."""
-    import shutil
     import tempfile
 
     skill_dir = Path.home() / ".claude" / "skills" / "jarvis"
     skill_file = skill_dir / "SKILL.md"
 
-    # Build the python command that reads and consumes the transcription
-    temp_dir = Path(tempfile.gettempdir()) / "jarvis-cli"
-    json_path = temp_dir / "last_transcription.json"
+    # Use the exact python executable path so the skill always finds the right env
+    python_exe = sys.executable.replace("\\", "\\\\")
+    json_path = (Path(tempfile.gettempdir()) / "jarvis-cli" / "last_transcription.json").as_posix()
 
     skill_content = f"""---
 name: jarvis
@@ -152,7 +103,7 @@ description: Read voice transcription from Jarvis daemon and use it as the user'
 The user spoke the following request via voice (transcribed by Jarvis voice middleware).
 Treat it as if the user typed it directly. Respond in the same language as the transcription.
 
-!`python -c "import json, tempfile, os; f=os.path.join(tempfile.gettempdir(),'jarvis-cli','last_transcription.json'); d=json.load(open(f,encoding='utf-8')); assert not d.get('consumed'), 'NO_TRANSCRIPTION'; d['consumed']=True; json.dump(d,open(f,'w',encoding='utf-8'),ensure_ascii=False); print(d['text'])"`
+!`{python_exe} -c "import json; f=r'{json_path}'; d=json.load(open(f,encoding='utf-8')); assert not d.get('consumed'), 'NO_TRANSCRIPTION'; d['consumed']=True; json.dump(d,open(f,'w',encoding='utf-8'),ensure_ascii=False); print(d['text'])"`
 """
 
     skill_dir.mkdir(parents=True, exist_ok=True)
