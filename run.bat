@@ -24,5 +24,6 @@ echo.
 echo Starting Jarvis (system tray)...
 start "" .venv\Scripts\pythonw.exe -m jarvis daemon
 echo Jarvis is running in the system tray!
+echo Log file: %TEMP%\jarvis-cli\daemon.log
 echo You can close this window.
 timeout /t 3

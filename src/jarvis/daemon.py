@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import signal
 import sys
@@ -12,6 +13,17 @@ import click
 import keyboard
 import mouse
 import numpy as np
+
+from jarvis.config import ensure_temp_dir
+
+# Log to file so pythonw errors are visible
+_LOG_FILE = ensure_temp_dir() / "daemon.log"
+logging.basicConfig(
+    filename=str(_LOG_FILE),
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+log = logging.getLogger("jarvis")
 
 from jarvis.audio_feedback import beep_ready, beep_start, beep_stop
 from jarvis.config import (
@@ -41,7 +53,14 @@ class Daemon:
         self._hotkey = get_hotkey()
         self._shutdown_event = threading.Event()
         click.echo("Loading Whisper model...")
+        log.info("Loading Whisper model...")
         self._transcriber = Transcriber()
+        log.info(
+            "Model loaded: %s, device=%s, compute=%s",
+            self._transcriber.model_name,
+            self._transcriber.device,
+            self._transcriber.compute_type,
+        )
         click.echo("Whisper model loaded.")
 
     def _on_hotkey(self) -> None:
