@@ -2,7 +2,7 @@
 
 Voice middleware for [Claude Code](https://claude.com/claude-code) — speech-to-text in **PT-BR** and **EN**.
 
-Jarvis captures audio from your microphone, transcribes it using [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and injects the text into Claude Code via hooks. Speak in Portuguese or English and let Claude act on your voice commands.
+Jarvis captures audio from your microphone, transcribes it using [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and injects the text into Claude Code via a `/jarvis` skill. Speak in Portuguese or English and let Claude act on your voice commands.
 
 ## Architecture
 
@@ -10,14 +10,14 @@ Jarvis captures audio from your microphone, transcribes it using [faster-whisper
 +---------------------+     +------------------+     +--------------+
 |   Daemon (Python)   |     |   JSON (temp)    |     |  Claude Code  |
 |                     |     |                  |     |              |
-| Ctrl+Alt+J > Record |---->| last_transcript  |<----| Hook reads   |
-| VAD > Stop          |     | .json            |     | on /voz      |
+| Ctrl+Alt+J > Record |---->| last_transcript  |<----| /jarvis skill |
+| VAD > Stop          |     | .json            |     | reads & sends |
 | Whisper > Transcribe|     |                  |     |              |
 +---------------------+     +------------------+     +--------------+
 ```
 
 - **Daemon** loads the Whisper model once and stays resident in memory
-- **Hook** executes in milliseconds (just reads a JSON file) — no timeout risk
+- **Skill** (`/jarvis`) reads the transcription JSON and passes it to Claude as if the user typed it
 - Communication via filesystem is simple and reliable
 
 ## Features
@@ -27,7 +27,7 @@ Jarvis captures audio from your microphone, transcribes it using [faster-whisper
 - Auto-detects language (Portuguese, English, and others)
 - Audio feedback beeps for recording start/stop
 - Atomic file operations for reliable IPC
-- Claude Code hook integration via `/voz`, `/voice`, or `/v`
+- Claude Code skill integration via `/jarvis`
 
 ## Requirements
 
@@ -59,11 +59,13 @@ pip install -e .
 run.bat
 ```
 
+This will run tests, install the `/jarvis` skill, and start the daemon.
+
 ### Manual Start
 
 ```bash
-# 1. Install the Claude Code hook
-jarvis install-hook
+# 1. Install the /jarvis skill into Claude Code
+jarvis install-skill
 
 # 2. Start the daemon
 jarvis daemon
@@ -72,27 +74,19 @@ jarvis daemon
 #    - Press Ctrl+Alt+J to start recording
 #    - Speak in Portuguese or English
 #    - Wait for the stop beep (silence detection)
-#    - Type /voz and press Enter
-#    - Claude receives your transcribed text
+#    - Type /jarvis and press Enter
+#    - Claude receives your transcribed text and acts on it
 ```
 
 ### CLI Commands
 
-| Command              | Description                              |
-|----------------------|------------------------------------------|
-| `jarvis daemon`     | Start the voice daemon (blocks)          |
-| `jarvis test`       | Record and transcribe a clip (testing)   |
-| `jarvis status`     | Check if the daemon is running           |
-| `jarvis stop`       | Stop the running daemon                  |
-| `jarvis install-hook` | Install hook into Claude Code settings |
-
-### Trigger Words
-
-Type any of these in Claude Code to inject the last transcription:
-
-- `/voz`
-- `/voice`
-- `/v`
+| Command               | Description                              |
+|-----------------------|------------------------------------------|
+| `jarvis daemon`      | Start the voice daemon (blocks)          |
+| `jarvis test`        | Record and transcribe a clip (testing)   |
+| `jarvis status`      | Check if the daemon is running           |
+| `jarvis stop`        | Stop the running daemon                  |
+| `jarvis install-skill` | Install `/jarvis` skill into Claude Code |
 
 ## Configuration
 
@@ -129,11 +123,9 @@ jarvis-cli/
 │   ├── recorder.py         # Audio capture (16kHz mono)
 │   ├── vad.py              # Silence detection by RMS energy
 │   ├── transcriber.py      # faster-whisper wrapper
-│   ├── hook.py             # Claude Code hook entry point
 │   ├── storage.py          # Atomic JSON read/write
 │   └── audio_feedback.py   # Start/stop beeps
 └── tests/
-    ├── test_hook.py
     ├── test_storage.py
     └── test_transcriber.py
 ```
