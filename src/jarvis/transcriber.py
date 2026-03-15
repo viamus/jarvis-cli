@@ -24,7 +24,8 @@ def _detect_device() -> tuple[str, str]:
     """Detect best available device. Returns (device, compute_type)."""
     try:
         import ctranslate2
-        if "cuda" in ctranslate2.get_supported_compute_types("cuda"):
+        cuda_types = ctranslate2.get_supported_compute_types("cuda")
+        if "float16" in cuda_types:
             return "cuda", "float16"
     except Exception:
         pass
