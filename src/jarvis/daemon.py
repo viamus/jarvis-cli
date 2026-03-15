@@ -110,6 +110,11 @@ class Daemon:
                 f"Transcribed: \"{result.text}\" "
                 f"({result.language}, {result.probability:.0%})"
             )
+
+            # Auto-submit /jarvis to the focused terminal
+            time.sleep(0.3)  # Brief pause for beep to be heard
+            keyboard.write("/jarvis", delay=0.02)
+            keyboard.press_and_release("enter")
         except Exception as e:
             try:
                 click.echo(f"Error: {e}", err=True)
