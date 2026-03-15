@@ -76,7 +76,6 @@ class Transcriber:
         duration = len(audio) / sample_rate
         segments, info = self.model.transcribe(
             audio,
-            language="pt",
             initial_prompt=_INITIAL_PROMPT,
             beam_size=5,
             temperature=0,
