@@ -2,14 +2,31 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 import click
 import numpy as np
-from faster_whisper import WhisperModel
-from faster_whisper.vad import VadOptions
 
-from jarvis.config import WHISPER_MODEL
+# Add NVIDIA DLL paths before importing ctranslate2/faster-whisper
+_site_packages = Path(sys.executable).parent / ".." / "Lib" / "site-packages"
+_nvidia_paths = []
+for _nvidia_dir in _site_packages.glob("nvidia/*/bin"):
+    _resolved = str(_nvidia_dir.resolve())
+    _nvidia_paths.append(_resolved)
+    try:
+        os.add_dll_directory(_resolved)
+    except OSError:
+        pass
+if _nvidia_paths:
+    os.environ["PATH"] = os.pathsep.join(_nvidia_paths) + os.pathsep + os.environ.get("PATH", "")
+
+from faster_whisper import WhisperModel  # noqa: E402
+from faster_whisper.vad import VadOptions  # noqa: E402
+
+from jarvis.config import WHISPER_MODEL  # noqa: E402
 
 # Technical vocabulary hint for the decoder — mix of PT-BR and tech terms
 _INITIAL_PROMPT = (

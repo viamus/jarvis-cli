@@ -16,6 +16,8 @@ dependencies = [
     "click>=8.1",
     "pystray>=0.19",
     "Pillow>=10.0",
+    "nvidia-cublas-cu12>=12.4; sys_platform == 'win32'",
+    "nvidia-cudnn-cu12>=9.0; sys_platform == 'win32'",
 ]
 
 [project.scripts]

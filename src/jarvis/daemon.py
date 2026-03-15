@@ -78,6 +78,7 @@ class Daemon:
     def _record_and_transcribe(self) -> None:
         """Record audio, detect silence, transcribe, and save."""
         try:
+            log.info("Recording started")
             if self._tray:
                 self._tray.set_state("recording")
 
@@ -117,14 +118,18 @@ class Daemon:
             if self._tray:
                 self._tray.set_state("transcribing")
 
+            log.info("Transcribing %d samples...", len(audio))
             click.echo("Transcribing...")
             result = self._transcriber.transcribe(audio, SAMPLE_RATE)
+            log.info("Transcription result: %r", result.text)
 
             if not result.text:
+                log.info("No speech detected")
                 click.echo("No speech detected.")
                 return
 
             save_transcription(result.text, result.language)
+            log.info("Saved transcription, playing ready beep")
             beep_ready()
             click.echo(
                 f"Transcribed: \"{result.text}\" "
@@ -136,6 +141,7 @@ class Daemon:
             keyboard.write("/jarvis", delay=0.02)
             keyboard.press_and_release("enter")
         except Exception as e:
+            log.exception("Error in record_and_transcribe")
             try:
                 click.echo(f"Error: {e}", err=True)
             except OSError:
@@ -235,6 +241,6 @@ class Daemon:
         signal.signal(signal.SIGTERM, _shutdown_signal)
 
         try:
-            keyboard.wait()  # Block forever
+            self._shutdown_event.wait()  # Block until shutdown
         except KeyboardInterrupt:
             _shutdown_signal(None, None)
