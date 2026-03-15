@@ -16,4 +16,8 @@ echo Installing pytest...
 pip install pytest -q
 
 echo.
+echo Downloading Whisper model...
+jarvis download-model
+
+echo.
 echo === Done! Run "run.bat" to start Jarvis ===

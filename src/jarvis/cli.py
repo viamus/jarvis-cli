@@ -113,6 +113,14 @@ Treat it as if the user typed it directly. Respond in the same language as the t
     click.echo("Use /jarvis in Claude Code to send voice transcriptions.")
 
 
+@cli.command("download-model")
+def download_model() -> None:
+    """Download the Whisper model (auto-detects GPU)."""
+    from jarvis.download_model import download
+
+    download()
+
+
 @cli.command("stop")
 def stop_daemon() -> None:
     """Stop the running Jarvis daemon."""
