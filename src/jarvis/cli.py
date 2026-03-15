@@ -91,8 +91,8 @@ def install_skill() -> None:
     skill_dir = Path.home() / ".claude" / "skills" / "jarvis"
     skill_file = skill_dir / "SKILL.md"
 
-    # Use the exact python executable path so the skill always finds the right env
-    python_exe = sys.executable.replace("\\", "\\\\")
+    # Use forward slashes so bash doesn't eat the backslashes
+    python_exe = Path(sys.executable).as_posix()
     json_path = (Path(tempfile.gettempdir()) / "jarvis-cli" / "last_transcription.json").as_posix()
 
     skill_content = f"""---
