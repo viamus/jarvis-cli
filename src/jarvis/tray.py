@@ -36,6 +36,7 @@ class TrayIcon:
                 enabled=False,
             ),
             pystray.MenuItem("Change Hotkey...", self._on_change_hotkey),
+            pystray.MenuItem("System Info...", self._on_system_info),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", self._on_quit),
         )
@@ -58,6 +59,12 @@ class TrayIcon:
 
         # Run dialog in a separate thread to not block the tray
         threading.Thread(target=capture_hotkey, args=(_on_captured,), daemon=True).start()
+
+    def _on_system_info(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
+        """Open the system info dialog."""
+        from jarvis.info_dialog import show_info
+
+        threading.Thread(target=show_info, args=(self._daemon,), daemon=True).start()
 
     def _on_quit(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
         self._daemon.shutdown()

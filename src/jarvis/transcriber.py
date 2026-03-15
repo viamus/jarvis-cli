@@ -47,6 +47,9 @@ class Transcriber:
         # GPU allows larger model for much better accuracy
         if device == "cuda" and model_name == "small":
             model_name = "large-v3"
+        self.model_name = model_name
+        self.device = device
+        self.compute_type = compute_type
         click.echo(f"Whisper: model={model_name}, device={device}, compute={compute_type}")
         self.model = WhisperModel(model_name, device=device, compute_type=compute_type)
 
