@@ -24,7 +24,7 @@ CHANNELS = 1
 SILENCE_THRESHOLD = 0.005
 SILENCE_DURATION = 2.0  # seconds of silence before stopping
 MIN_SPEECH_DURATION = 0.5  # minimum speech before allowing stop
-MAX_RECORDING_DURATION = 30.0  # hard cap on recording length
+MAX_RECORDING_DURATION = float(os.environ.get("JARVIS_MAX_DURATION", "120"))  # hard cap on recording length
 
 
 def ensure_temp_dir() -> Path:
