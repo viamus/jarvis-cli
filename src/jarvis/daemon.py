@@ -10,6 +10,7 @@ import time
 
 import click
 import keyboard
+import mouse
 import numpy as np
 
 from jarvis.audio_feedback import beep_ready, beep_start, beep_stop
@@ -134,11 +135,37 @@ class Daemon:
         if PID_FILE.exists():
             PID_FILE.unlink()
 
+    def _is_mouse_hotkey(self, hotkey: str) -> bool:
+        return hotkey.startswith("mouse")
+
+    def _bind_hotkey(self, hotkey: str) -> None:
+        """Bind a keyboard or mouse hotkey."""
+        if self._is_mouse_hotkey(hotkey):
+            # mouse4 → "x", mouse5 → "x2", mouse_middle → "middle"
+            button_map = {
+                "mouse_left": "left",
+                "mouse_middle": "middle",
+                "mouse_right": "right",
+                "mouse4": "x",
+                "mouse5": "x2",
+            }
+            button = button_map.get(hotkey, "x")
+            mouse.on_button(self._on_hotkey, buttons=(button,), types=("down",))
+        else:
+            keyboard.add_hotkey(hotkey, self._on_hotkey)
+
+    def _unbind_hotkey(self, hotkey: str) -> None:
+        """Unbind a keyboard or mouse hotkey."""
+        if self._is_mouse_hotkey(hotkey):
+            mouse.unhook_all()
+        else:
+            keyboard.remove_hotkey(hotkey)
+
     def rebind_hotkey(self, new_hotkey: str) -> None:
         """Change the hotkey at runtime."""
-        keyboard.remove_hotkey(self._hotkey)
+        self._unbind_hotkey(self._hotkey)
         self._hotkey = new_hotkey
-        keyboard.add_hotkey(self._hotkey, self._on_hotkey)
+        self._bind_hotkey(self._hotkey)
         click.echo(f"Hotkey changed to: {self._hotkey}")
 
     def shutdown(self) -> None:
@@ -150,7 +177,7 @@ class Daemon:
     def run(self) -> None:
         """Start the daemon: register hotkey and block."""
         self.write_pid()
-        keyboard.add_hotkey(self._hotkey, self._on_hotkey)
+        self._bind_hotkey(self._hotkey)
         click.echo(f"Jarvis daemon running. Hotkey: {self._hotkey}")
 
         if self._use_tray:
