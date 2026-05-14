@@ -35,11 +35,28 @@ class TrayIcon:
                 None,
                 enabled=False,
             ),
+            pystray.MenuItem(
+                lambda _: f"Target: {self._target_label()}",
+                None,
+                enabled=False,
+            ),
             pystray.MenuItem("Change Hotkey...", self._on_change_hotkey),
+            pystray.MenuItem(
+                "Target",
+                pystray.Menu(
+                    pystray.MenuItem("Claude Code (/jarvis)", self._on_target_claude),
+                    pystray.MenuItem("Codex ($jarvis)", self._on_target_codex),
+                ),
+            ),
             pystray.MenuItem("System Info...", self._on_system_info),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", self._on_quit),
         )
+
+    def _target_label(self) -> str:
+        from jarvis.settings import get_target_command, get_target_label
+
+        return f"{get_target_label(self._daemon._target)} ({get_target_command(self._daemon._target)})"
 
     def set_state(self, state: str) -> None:
         """Update icon state: 'idle', 'recording', or 'transcribing'."""
@@ -59,6 +76,19 @@ class TrayIcon:
 
         # Run dialog in a separate thread to not block the tray
         threading.Thread(target=capture_hotkey, args=(_on_captured,), daemon=True).start()
+
+    def _set_target(self, target: str) -> None:
+        self._daemon.set_target(target)
+        if self._icon is not None:
+            self._icon.update_menu()
+
+    def _on_target_claude(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
+        """Select Claude Code as the auto-submit target."""
+        self._set_target("claude")
+
+    def _on_target_codex(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
+        """Select Codex as the auto-submit target."""
+        self._set_target("codex")
 
     def _on_system_info(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
         """Open the system info dialog."""

@@ -1,4 +1,4 @@
-"""Jarvis CLI — voice middleware for Claude Code."""
+"""Jarvis CLI — voice middleware for Claude Code and Codex."""
 
 from __future__ import annotations
 
@@ -9,11 +9,12 @@ from pathlib import Path
 import click
 
 from jarvis.config import HOTKEY, PID_FILE, SAMPLE_RATE, ensure_temp_dir
+from jarvis.settings import get_target_command, get_target_label, set_target
 
 
 @click.group()
 def cli() -> None:
-    """Jarvis: voice middleware for Claude Code."""
+    """Jarvis: voice middleware for Claude Code and Codex."""
     pass
 
 
@@ -70,6 +71,8 @@ def test() -> None:
 @cli.command()
 def status() -> None:
     """Check if the Jarvis daemon is running."""
+    click.echo(f"Jarvis target: {get_target_label()} ({get_target_command()})")
+
     if not PID_FILE.exists():
         click.echo("Jarvis daemon is not running.")
         return
@@ -84,21 +87,17 @@ def status() -> None:
         PID_FILE.unlink()
 
 
-@cli.command("install-skill")
-def install_skill() -> None:
-    """Install the /jarvis skill into Claude Code."""
+def _skill_content() -> str:
+    """Build the shared /jarvis skill content."""
     import tempfile
-
-    skill_dir = Path.home() / ".claude" / "skills" / "jarvis"
-    skill_file = skill_dir / "SKILL.md"
 
     # Use forward slashes so bash doesn't eat the backslashes
     python_exe = Path(sys.executable).as_posix()
     json_path = (Path(tempfile.gettempdir()) / "jarvis-cli" / "last_transcription.json").as_posix()
 
-    skill_content = f"""---
+    return f"""---
 name: jarvis
-description: Read voice transcription from Jarvis daemon and use it as the user's spoken request. Use when the user invokes /jarvis.
+description: Read voice transcription from Jarvis daemon and use it as the user's spoken request. Use when the user invokes /jarvis, $jarvis, says jarvis, or asks to use a voice transcription from Jarvis.
 ---
 
 The user spoke the following request via voice (transcribed by Jarvis voice middleware).
@@ -107,10 +106,50 @@ Treat it as if the user typed it directly. Respond in the same language as the t
 !`{python_exe} -c "import json; f=r'{json_path}'; d=json.load(open(f,encoding='utf-8')); assert not d.get('consumed'), 'NO_TRANSCRIPTION'; d['consumed']=True; json.dump(d,open(f,'w',encoding='utf-8'),ensure_ascii=False); print(d['text'])"`
 """
 
+
+@cli.command("target")
+@click.argument("target", required=False)
+def target(target: str | None) -> None:
+    """Show or set the auto-submit target: claude or codex."""
+    if target is not None:
+        try:
+            set_target(target)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"Jarvis target: {get_target_label()} ({get_target_command()})")
+
+
+def _install_skill(skill_dir: Path, product_name: str) -> Path:
+    skill_file = skill_dir / "SKILL.md"
     skill_dir.mkdir(parents=True, exist_ok=True)
-    skill_file.write_text(skill_content.strip() + "\n", encoding="utf-8")
-    click.echo(f"Jarvis skill installed at {skill_file}")
+    skill_file.write_text(_skill_content().strip() + "\n", encoding="utf-8")
+    click.echo(f"Jarvis skill installed for {product_name} at {skill_file}")
+    return skill_file
+
+
+@cli.command("install-skill")
+def install_skill() -> None:
+    """Install the /jarvis skill into Claude Code."""
+    _install_skill(Path.home() / ".claude" / "skills" / "jarvis", "Claude Code")
     click.echo("Use /jarvis in Claude Code to send voice transcriptions.")
+
+
+@cli.command("install-codex-skill")
+def install_codex_skill() -> None:
+    """Install the Jarvis skill into Codex."""
+    codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
+    _install_skill(codex_home / "skills" / "jarvis", "Codex")
+    click.echo("Use $jarvis in Codex to send voice transcriptions.")
+
+
+@cli.command("install-all-skills")
+def install_all_skills() -> None:
+    """Install the Jarvis skill into Claude Code and Codex."""
+    _install_skill(Path.home() / ".claude" / "skills" / "jarvis", "Claude Code")
+    codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
+    _install_skill(codex_home / "skills" / "jarvis", "Codex")
+    click.echo("Use /jarvis in Claude Code or $jarvis in Codex to send voice transcriptions.")
 
 
 @cli.command("download-model")

@@ -1,25 +1,25 @@
 # Jarvis-CLI
 
-Voice middleware for [Claude Code](https://claude.com/claude-code) — speech-to-text in **PT-BR** and **EN**.
+Voice middleware for [Claude Code](https://claude.com/claude-code) and Codex — speech-to-text in **PT-BR** and **EN**.
 
-Jarvis captures audio from your microphone, transcribes it using [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and injects the text into Claude Code via a `/jarvis` skill. Speak in Portuguese or English and let Claude act on your voice commands.
+Jarvis captures audio from your microphone, transcribes it using [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and injects the text into Claude Code or Codex via a Jarvis skill. Speak in Portuguese or English and let your coding agent act on your voice commands.
 
 ## Architecture
 
 ```
 +---------------------+     +------------------+     +--------------+
-|   Daemon (Python)   |     |   JSON (temp)    |     |  Claude Code  |
+|   Daemon (Python)   |     |   JSON (temp)    |     | Claude/Codex  |
 |                     |     |                  |     |              |
 | Hotkey > Record     |---->| last_transcript  |<----| /jarvis skill |
 | VAD > Stop          |     | .json            |     | reads & sends |
 | Whisper > Transcribe|     |                  |     |              |
-| Auto-type /jarvis   |     |                  |     |              |
+| Auto-type Jarvis cmd|     |                  |     |              |
 +---------------------+     +------------------+     +--------------+
 ```
 
 - **Daemon** loads the Whisper model once, stays resident in the system tray
-- **Skill** (`/jarvis`) reads the transcription JSON and passes it to Claude as if the user typed it
-- **Hands-free**: after transcription, Jarvis auto-types `/jarvis` + Enter in the active terminal
+- **Skill** (`/jarvis` for Claude Code, `$jarvis` for Codex) reads the transcription JSON and passes it to the assistant as if the user typed it
+- **Hands-free**: after transcription, Jarvis auto-types the configured Jarvis command + Enter in the active terminal
 
 ## Features
 
@@ -30,7 +30,7 @@ Jarvis captures audio from your microphone, transcribes it using [faster-whisper
 - **GPU acceleration** — auto-detects CUDA, uses `distil-large-v3` on GPU
 - **CPU fallback** — uses `small` model with `float32` when no GPU available
 - **Audio feedback** — 3 distinct beeps: start, stop, transcription ready
-- **Auto-submit** — types `/jarvis` + Enter automatically when transcription is ready
+- **Auto-submit** — types `/jarvis` for Claude Code or `$jarvis` for Codex when transcription is ready
 - **PT-BR optimized** — language hint + tech vocabulary prompt for better accuracy
 - Atomic file operations for reliable IPC
 - Persistent settings (hotkey, preferences)
@@ -82,7 +82,7 @@ Without a GPU, Jarvis uses the `small` model on CPU with `float32` — still goo
 run.bat
 ```
 
-This runs tests, installs the `/jarvis` skill, and starts the daemon in the system tray.
+This runs tests, installs the Jarvis skills, and starts the daemon in the system tray.
 
 ### How It Works
 
@@ -90,8 +90,8 @@ This runs tests, installs the `/jarvis` skill, and starts the daemon in the syst
 2. **Speak** your command in Portuguese or English
 3. **Stop** — either press the hotkey again, or wait for silence detection
 4. **Beep sounds**: start beep → stop beep → ready beep (triple ascending)
-5. **Auto-submit** — Jarvis types `/jarvis` + Enter in your terminal automatically
-6. **Claude responds** to your voice command
+5. **Auto-submit** — Jarvis types `/jarvis` for Claude Code or `$jarvis` for Codex automatically
+6. **Claude Code or Codex responds** to your voice command
 
 ### System Tray
 
@@ -99,6 +99,7 @@ Jarvis runs as a system tray icon (near the clock). Right-click for options:
 
 - **Status** — current state (Idle/Recording/Transcribing)
 - **Hotkey** — shows current hotkey
+- **Target** — choose Claude Code (`/jarvis`) or Codex (`$jarvis`)
 - **Change Hotkey...** — open dialog to set a new key or mouse button
 - **System Info...** — shows model, device, GPU, compute type
 - **Quit** — stop the daemon
@@ -112,8 +113,13 @@ Jarvis runs as a system tray icon (near the clock). Right-click for options:
 | `jarvis download-model` | Download the Whisper model             |
 | `jarvis test`        | Record and transcribe a clip (testing)   |
 | `jarvis status`      | Check if the daemon is running           |
+| `jarvis target`      | Show the current auto-submit target      |
+| `jarvis target claude` | Auto-submit `/jarvis` for Claude Code  |
+| `jarvis target codex` | Auto-submit `$jarvis` for Codex         |
 | `jarvis stop`        | Stop the running daemon                  |
 | `jarvis install-skill` | Install `/jarvis` skill into Claude Code |
+| `jarvis install-codex-skill` | Install `$jarvis` skill into Codex |
+| `jarvis install-all-skills` | Install Jarvis skills into Claude Code and Codex |
 
 ## Configuration
 

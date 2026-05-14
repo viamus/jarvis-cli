@@ -33,7 +33,13 @@ from jarvis.config import (
     ensure_temp_dir,
 )
 from jarvis.recorder import Recorder
-from jarvis.settings import get_hotkey
+from jarvis.settings import (
+    get_hotkey,
+    get_target,
+    get_target_command,
+    get_target_label,
+    set_target,
+)
 from jarvis.storage import save_transcription
 from jarvis.transcriber import Transcriber
 from jarvis.vad import SilenceDetector
@@ -51,6 +57,7 @@ class Daemon:
         self._use_tray = use_tray
         self._tray = None
         self._hotkey = get_hotkey()
+        self._target = get_target()
         self._shutdown_event = threading.Event()
         click.echo("Loading Whisper model...")
         log.info("Loading Whisper model...")
@@ -136,10 +143,14 @@ class Daemon:
                 f"({result.language}, {result.probability:.0%})"
             )
 
-            # Auto-submit /jarvis to the focused terminal
+            # Auto-submit the Jarvis skill command to the focused terminal.
             time.sleep(0.3)  # Brief pause for beep to be heard
-            keyboard.write("/jarvis", delay=0.02)
-            keyboard.press_and_release("enter")
+            if self._target == "codex":
+                keyboard.write(f"{get_target_command(self._target)}\r\n", delay=0.02)
+            else:
+                keyboard.write(get_target_command(self._target), delay=0.02)
+                time.sleep(0.2)
+                keyboard.send("enter")
         except Exception as e:
             log.exception("Error in record_and_transcribe")
             try:
@@ -193,6 +204,14 @@ class Daemon:
         self._bind_hotkey(self._hotkey)
         click.echo(f"Hotkey changed to: {self._hotkey}")
 
+    def set_target(self, target: str) -> None:
+        """Change the assistant target at runtime."""
+        self._target = set_target(target)
+        click.echo(
+            f"Jarvis target changed to: {get_target_label(self._target)} "
+            f"({get_target_command(self._target)})"
+        )
+
     def shutdown(self) -> None:
         """Signal the daemon to shut down cleanly."""
         self.remove_pid()
@@ -203,7 +222,10 @@ class Daemon:
         """Start the daemon: register hotkey and block."""
         self.write_pid()
         self._bind_hotkey(self._hotkey)
-        click.echo(f"Jarvis daemon running. Hotkey: {self._hotkey}")
+        click.echo(
+            f"Jarvis daemon running. Hotkey: {self._hotkey}. "
+            f"Target: {get_target_label(self._target)} ({get_target_command(self._target)})"
+        )
 
         if self._use_tray:
             self._run_with_tray()
